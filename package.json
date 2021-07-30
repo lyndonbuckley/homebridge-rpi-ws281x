@@ -28,8 +28,7 @@
     "ws281x"
   ],
   "dependencies": {
-    "color-convert": "^1.9.3",
-    "rpi-ws281x": "^1.0.36"
+    "axios": "^0.21.1"
   },
   "devDependencies": {
     "@types/node": "^14.14.31",

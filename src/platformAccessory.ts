@@ -1,8 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
-import {default as ws281x} from 'rpi-ws281x';
-import {default as colorConvert} from 'color-convert';
 import { RPIWS281xPlatform } from './platform';
-
+import axios from 'axios';
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -16,7 +14,9 @@ export class RPIWS281xAccessory {
    * You should implement your own code to track the state of your accessory
    */
   private state = {
-    on: false,
+    power: false,
+    hue: 300,
+    saturation: 100,
     brightness: 100,
   };
 
@@ -27,7 +27,6 @@ export class RPIWS281xAccessory {
     private readonly accessory: PlatformAccessory,
   ) {
 
-    ws281x.configure({leds:1024});
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -58,15 +57,7 @@ export class RPIWS281xAccessory {
   }
 
   render() {
-    const brightness = this.state.on ? this.state.brightness : 0;
-    const [red, green, blue] = colorConvert.hsv.rgb(0,255, brightness);
-    const binary = ((red & 0xff) << 16) + ((green & 0xff) << 8) + (blue & 0xff);
-
-    for (let i = 0; i < 1024; i++) {
-      this.pixels[i] = binary;
-    }
-
-    ws281x.render(this.pixels);
+	axios.post('http://127.0.0.1/state', this.state);
   }
 
   /**
@@ -75,9 +66,9 @@ export class RPIWS281xAccessory {
    */
   async setOn(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
-    this.state.on = value as boolean;
-
+    this.state.power = value as boolean;
     this.platform.log.debug('Set Characteristic On ->', value);
+    this.render();
   }
 
   /**
@@ -95,7 +86,7 @@ export class RPIWS281xAccessory {
    */
   async getOn(): Promise<CharacteristicValue> {
     // implement your own code to check if the device is on
-    const isOn = this.state.on;
+    const isOn = this.state.power;
 
     this.platform.log.debug('Get Characteristic On ->', isOn);
 
@@ -113,6 +104,7 @@ export class RPIWS281xAccessory {
     // implement your own code to set the brightness
     this.state.brightness = value as number;
     this.platform.log.debug('Set Characteristic Brightness -> ', value);
+    this.render();
   }
 
 }
