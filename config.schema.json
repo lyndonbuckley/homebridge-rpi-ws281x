@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "RPI-WS281X",
+  "pluginAlias": "RPIWS281XPlatform",
   "pluginType": "platform",
   "singular": true,
   "schema": {
