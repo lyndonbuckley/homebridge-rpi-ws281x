@@ -1,28 +1,33 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
-import { ExampleHomebridgePlatform } from './platform';
+import { RPIWS281xPlatform } from './platform';
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export class ExamplePlatformAccessory {
+export class RPIWS281xAccessory {
   private service: Service;
 
   /**
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
    */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
+  private state = {
+    on: false,
+    brightness: 100,
   };
 
+  private ws281x = require('rpi-ws281x');
+  private pixels = new Uint32Array(1024);
+
   constructor(
-    private readonly platform: ExampleHomebridgePlatform,
+    private readonly platform: RPIWS281xPlatform,
     private readonly accessory: PlatformAccessory,
   ) {
+
+    this.ws281x.configure({leds:1024});
 
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
@@ -36,7 +41,7 @@ export class ExamplePlatformAccessory {
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.displayName);
 
     // each service must implement at-minimum the "required characteristics" for the given service type
     // see https://developers.homebridge.io/#/service/Lightbulb
@@ -50,45 +55,18 @@ export class ExamplePlatformAccessory {
     this.service.getCharacteristic(this.platform.Characteristic.Brightness)
       .onSet(this.setBrightness.bind(this));       // SET - bind to the 'setBrightness` method below
 
-    /**
-     * Creating multiple services of the same type.
-     *
-     * To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
-     * when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
-     * this.accessory.getService('NAME') || this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE_ID');
-     *
-     * The USER_DEFINED_SUBTYPE must be unique to the platform accessory (if you platform exposes multiple accessories, each accessory
-     * can use the same sub type id.)
-     */
+  }
 
-    // Example: add two "motion sensor" services to the accessory
-    const motionSensorOneService = this.accessory.getService('Motion Sensor One Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor One Name', 'YourUniqueIdentifier-1');
+  render() {
+    const brightness = this.state.on ? this.state.brightness : 0;
+    const [red, green, blue] = require('color-convert').hsv.rgb(128, 0, brightness);
+    const binary = ((red & 0xff) << 16) + ((green & 0xff) << 8) + (blue & 0xff);
 
-    const motionSensorTwoService = this.accessory.getService('Motion Sensor Two Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor Two Name', 'YourUniqueIdentifier-2');
+    for (let i = 0; i < 1024; i++) {
+      this.pixels[i] = binary;
+    }
 
-    /**
-     * Updating characteristics values asynchronously.
-     *
-     * Example showing how to update the state of a Characteristic asynchronously instead
-     * of using the `on('get')` handlers.
-     * Here we change update the motion sensor trigger states on and off every 10 seconds
-     * the `updateCharacteristic` method.
-     *
-     */
-    let motionDetected = false;
-    setInterval(() => {
-      // EXAMPLE - inverse the trigger
-      motionDetected = !motionDetected;
-
-      // push the new value to HomeKit
-      motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
-      motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
-
-      this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-      this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
-    }, 10000);
+    this.ws281x.render(this.pixels);
   }
 
   /**
@@ -97,7 +75,7 @@ export class ExamplePlatformAccessory {
    */
   async setOn(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
+    this.state.on = value as boolean;
 
     this.platform.log.debug('Set Characteristic On ->', value);
   }
@@ -117,7 +95,7 @@ export class ExamplePlatformAccessory {
    */
   async getOn(): Promise<CharacteristicValue> {
     // implement your own code to check if the device is on
-    const isOn = this.exampleStates.On;
+    const isOn = this.state.on;
 
     this.platform.log.debug('Get Characteristic On ->', isOn);
 
@@ -133,8 +111,7 @@ export class ExamplePlatformAccessory {
    */
   async setBrightness(value: CharacteristicValue) {
     // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
-
+    this.state.brightness = value as number;
     this.platform.log.debug('Set Characteristic Brightness -> ', value);
   }
 
