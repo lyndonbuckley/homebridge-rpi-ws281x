@@ -54,7 +54,7 @@ export class RPIWS281xPlatform implements DynamicPlatformPlugin {
       {
         id: 'RPI-WS281X',
         displayName: 'RPI-WS281X',
-      }
+      },
     ];
 
     // loop over the discovered devices and register each one if it has not already been registered
