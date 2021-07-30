@@ -59,7 +59,7 @@ export class RPIWS281xAccessory {
 
   render() {
     const brightness = this.state.on ? this.state.brightness : 0;
-    const [red, green, blue] = colorConvert.hsv.rgb(128, 0, brightness);
+    const [red, green, blue] = colorConvert.hsv.rgb(0,255, brightness);
     const binary = ((red & 0xff) << 16) + ((green & 0xff) << 8) + (blue & 0xff);
 
     for (let i = 0; i < 1024; i++) {
